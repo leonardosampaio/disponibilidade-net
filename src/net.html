@@ -1,0 +1,163 @@
+<html>
+<head>
+<style>
+html, body, #map_canvas {
+	margin: 0;
+	padding: 0;
+	height: 100%
+}
+</style>
+<script type="text/javascript"
+	src="http://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+<script>
+		
+		var enderecos = [];
+		var indexEnderecos = 0;
+		var map;
+		var infowindow;
+		var geocoder;
+		
+		var mapOptions = {
+			center : new google.maps.LatLng(0.0, 0.0),
+			zoom : 2,
+			mapTypeId : google.maps.MapTypeId.ROADMAP
+		};
+		
+		var getJSON = function(url, callback) {
+			var xhr = new XMLHttpRequest();
+			xhr.open('get', url, true);
+			xhr.responseType = 'json';
+			xhr.onload = function() {
+				var status = xhr.status;
+				if (status == 200) {
+					callback(null, xhr.response);
+				} else {
+					callback(status);
+				}
+			};
+			xhr.send();
+		};
+		
+		function parseAddress(data)
+		{
+			enderecos[indexEnderecos] = enderecos[indexEnderecos] + ((typeof data['response']['docs'][0] !== 'undefined' && data['response']['docs'][0]['hasNet'] != 'unfefined' && data['response']['docs'][0]['hasNet']) ? " : Disponível" : " : Não disponível");
+			indexEnderecos++;
+			
+			if (indexEnderecos == enderecos.length)
+			{
+				var str = '';
+				enderecos.forEach(function(a){
+					str += a + "<br>";
+				});
+				
+				infowindow.setContent(str == "" ? "Não encontrado" : str);
+			}
+			
+		}
+		function initialize() {
+			var myOptions = {
+				center : {
+					lat : -13.2104666,
+					lng : -56.6947731
+				},
+				zoom : 4,
+				mapTypeId : google.maps.MapTypeId.ROADMAP
+			};
+
+			geocoder = new google.maps.Geocoder();
+			var map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+			infowindow = new google.maps.InfoWindow();
+			google.maps.event.addListener(map, 'click', function(event) {
+				indexEnderecos = 0;
+				enderecos = [];
+				placeMarker(event.latLng);
+			});
+
+				var marker;
+				function placeMarker(location) {
+					if (marker) {
+						marker.setPosition(location);
+					} else {
+						marker = new google.maps.Marker({
+							position : location,
+							map : map
+						});
+					}
+
+					infowindow.setContent('Carregando...');
+					infowindow.open(map, marker);
+
+					getAddress(location, map, marker);
+					
+				}
+				
+				function atualizaStatusNet(rua, cidade, estado, map, marker) {
+
+					urlCep = "https://viacep.com.br/ws/"+estado+"/"+cidade+"/"+rua+"/json/";
+					
+					getJSON(urlCep, function(err,data) {
+								if (err != null) {
+									alert('Erro: ' + err);
+								} else {
+									var index = 0;
+									
+									data.forEach(function(cep) {
+										
+										var str = '';
+										
+										cepStr = cep['cep'].replace('-','');
+										
+										urlNet = "http://programacao.netcombo.com.br/gatekeeper/cep/select?wt=jsonp&rows=1&json.wrf=parseAddress&indent=true&fl=cep,grupo,uf,cidade,bairro,via,hasNet&q=cep%3A"+cepStr+"&true=parseAddress";
+										
+										var script = document.createElement('script');
+										script.src = urlNet;
+
+										document.getElementsByTagName('head')[0].appendChild(script);
+										
+										str += 	cep['cep'] + " " + cep['logradouro'] + (cep['complemento']==''?", " :", "+cep['complemento']+", " ) + cep['bairro'];
+										enderecos[index] = str;
+										index++;
+										
+									});
+									
+								}
+							});
+
+				}
+
+				function getAddress(latLng, map, marker) {
+					geocoder.geocode(
+					{
+						'latLng' : latLng
+					},
+					function(results, status) {
+						if (status == google.maps.GeocoderStatus.OK) {
+							if (results[0]) {
+
+								enderecoMaps = results[0].formatted_address;
+
+								rua = results[0]['address_components'][1]['long_name'];
+								cidade = results[0]['address_components'][3]['long_name'];
+								estado = results[0]['address_components'][5]['short_name'];
+
+								atualizaStatusNet(rua, cidade, estado, map, marker);
+								
+							} else {
+								infowindow.setContent("Sem resultados");
+							}
+						} else {
+							infowindow.setContent(status);
+						}
+					});
+					
+				}
+		}
+		google.maps.event.addDomListener(window, 'load', initialize);
+		
+		</script>
+</head>
+<body>
+	<div id="map_canvas"></div>
+</body>
+</html>
