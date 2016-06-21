@@ -2,6 +2,12 @@
 
 Exemplo de utilização da API Javascript do Google Maps para plotar informações sobre disponibilidade de instalação da NET (www.netcombo.com.br) em uma determinada rua a partir da consulta de CEP da mesma.
 
+###Requisitos
+
+Chave válida da API:
+
+https://developers.google.com/maps/documentation/javascript/get-api-key
+
 ### Endpoints
 
 Consulta de CEP JSON gratuita a partir de um nome de rua, cidade e estado:
